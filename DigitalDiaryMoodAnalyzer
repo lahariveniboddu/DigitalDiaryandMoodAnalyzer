@@ -1,0 +1,149 @@
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
+public class DigitalDiaryMoodAnalyzer {
+
+    // ===== Model =====
+    static class DiaryEntry {
+        String date;
+        String mood;
+        String note;
+
+        DiaryEntry(String date, String mood, String note) {
+            this.date = date;
+            this.mood = mood;
+            this.note = note;
+        }
+
+        @Override
+        public String toString() {
+            return date + "," + mood + "," + note;
+        }
+    }
+
+    // ===== File Handler =====
+    static class FileHandler {
+        private static final String FILE_NAME = "diary.txt";
+
+        static void saveEntry(DiaryEntry entry) {
+            try (FileWriter fw = new FileWriter(FILE_NAME, true)) {
+                fw.write(entry.toString() + "\n");
+            } catch (IOException e) {
+                System.out.println("Error saving diary entry.");
+            }
+        }
+
+        static List<DiaryEntry> readEntries() {
+            List<DiaryEntry> list = new ArrayList<>();
+            try (BufferedReader br = new BufferedReader(new FileReader(FILE_NAME))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] data = line.split(",", 3);
+                    if (data.length == 3) {
+                        list.add(new DiaryEntry(data[0], data[1], data[2]));
+                    }
+                }
+            } catch (IOException e) {
+                // file may not exist initially
+            }
+            return list;
+        }
+    }
+
+    // ===== Service =====
+    static class DiaryService {
+
+        void addEntry(String mood, String note) {
+            String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            DiaryEntry entry = new DiaryEntry(date, mood, note);
+            FileHandler.saveEntry(entry);
+        }
+
+        void viewAllEntries() {
+            List<DiaryEntry> entries = FileHandler.readEntries();
+            if (entries.isEmpty()) {
+                System.out.println("No diary entries found.");
+                return;
+            }
+            System.out.println("\nDate       | Mood    | Note");
+            System.out.println("-----------------------------------");
+            for (DiaryEntry e : entries) {
+                System.out.printf("%s | %-7s | %s\n", e.date, e.mood, e.note);
+            }
+        }
+
+        void moodReport() {
+            List<DiaryEntry> entries = FileHandler.readEntries();
+            if (entries.isEmpty()) {
+                System.out.println("No data available for analysis.");
+                return;
+            }
+
+            Map<String, Integer> moodCount = new HashMap<>();
+            for (DiaryEntry e : entries) {
+                moodCount.put(e.mood, moodCount.getOrDefault(e.mood, 0) + 1);
+            }
+
+            System.out.println("\nMood Analysis Report");
+            System.out.println("---------------------");
+            moodCount.forEach((mood, count) ->
+                    System.out.println(mood + " : " + count + " days"));
+
+            String mostCommonMood = Collections.max(
+                    moodCount.entrySet(),
+                    Map.Entry.comparingByValue()
+            ).getKey();
+
+            System.out.println("\nMost Frequent Mood: " + mostCommonMood);
+        }
+    }
+
+    // ===== UI =====
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        DiaryService service = new DiaryService();
+
+        while (true) {
+            System.out.println("\n=== Digital Diary & Mood Analyzer ===");
+            System.out.println("1. Add Diary Entry");
+            System.out.println("2. View All Entries");
+            System.out.println("3. View Mood Report");
+            System.out.println("0. Exit");
+            System.out.print("Choose option: ");
+
+            int choice;
+            try {
+                choice = Integer.parseInt(sc.nextLine());
+            } catch (Exception e) {
+                System.out.println("Invalid input.");
+                continue;
+            }
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter Mood (Happy/Sad/Neutral/Angry): ");
+                    String mood = sc.nextLine();
+                    System.out.print("Write your note: ");
+                    String note = sc.nextLine();
+                    service.addEntry(mood, note);
+                    System.out.println("Diary entry saved.");
+                    break;
+
+                case 2:
+                    service.viewAllEntries();
+                    break;
+
+                case 3:
+                    service.moodReport();
+                    break;
+
+                case 0:
+                    System.out.println("Exiting... Stay positive 😊");
+                    return;
+
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+}
